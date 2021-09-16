@@ -23,6 +23,11 @@ namespace BrutBTC
         #endregion
         static void Main(string[] args)
         {
+            Console.CursorVisible = false;
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Title = "Oxygenium\\BrutBTC";
+
+
             string file = string.Empty;
             if (args.Length > 0)
             {
@@ -30,18 +35,19 @@ namespace BrutBTC
             }
             else
             {
-                Console.Write("Укажите относительный путь к файлу адресов: ");
+                Console.Write("  Укажите относительный путь к файлу адресов: ");
                 file = Console.ReadLine(); // Иначе указываем
             }
-            Console.CursorVisible = false;
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Загрузка базы кошельков");
+            
+            Console.WriteLine("  Загрузка базы кошельков");
             var timeload = loadbase(file); // Грузим базу
             Console.Clear();
-            Console.WriteLine($"База загружена за {timeload} сек");
+
+            Console.WriteLine($"  База загружена за {timeload} сек");
             var count = Environment.ProcessorCount; // Узнаем максимальное количество потоков
             Console.WriteLine();
-
+            Console.WriteLine("|   Поток   |   Скорость   |");
+            Console.WriteLine("----------------------------");
             speeds = new double[count];
 
             for (int i = 0; i < count; i++)
@@ -51,20 +57,20 @@ namespace BrutBTC
                 thr.Priority = ThreadPriority.Highest; // Выставялем максимальный приоритет
                 thr.Start();
                 //Task.Run(() => brut(j)); // Можно стартануть как таск
-                Console.WriteLine($"Thread #{i}: 0 wallets/seconds");
+                Console.WriteLine($"| Thread #{i}".PadRight(12) + "|          w/s |");
             }
-
+            Console.WriteLine("----------------------------");
             while (true)
             {
                 int end = 0;
                 for (int i = 0; i < count; i++)
                 {
-                    Console.SetCursorPosition(11, 2 + i);
-                    Console.WriteLine($"{ speeds[i] } wallets/seconds"); // Обновляем инфу каждые 0,5 сек
+                    Console.SetCursorPosition(13, 4 + i);
+                    Console.WriteLine($" { speeds[i] }".PadRight(9)); // Обновляем инфу каждые 0,5 сек
                     end = i;
                 }
-                Console.SetCursorPosition(0, end + 4);
-                Console.WriteLine($"Total {speeds.Sum()}"); // Суммарная скорость
+                Console.SetCursorPosition(0, end + 6);
+                Console.WriteLine($"  Total {speeds.Sum()} w/s"); // Суммарная скорость
                 Thread.Sleep(500);
             }
         }
@@ -102,8 +108,8 @@ namespace BrutBTC
             while (true)
             {
                 rng.GetBytes(arr); // Заполняем рандомно массив
-                var secret = getKey(arr); // Получаем из него секрет
-                var address = new BitcoinSecret(secret, Network.Main).GetAddress(ScriptPubKeyType.Legacy).ToString(); // из секрета получаем адресс
+                var secret = new Key(arr, -1, false).GetBitcoinSecret(Network.Main); // Получаем из него секрет в WIF формате
+                var address = secret.GetAddress(ScriptPubKeyType.Legacy).ToString(); // из секрета получаем адресс
                 try
                 {
                     if (wallets[address[1]][address[2]][address[3]][address[4]].Any(w => w == address)) // Проверяем
@@ -126,19 +132,68 @@ namespace BrutBTC
             }
         }
         /// <summary>
-        /// Получение секрета из массива байт
+        /// Вывод массива байтов в строку
         /// </summary>
-        /// <param name="bytes">Массив байт</param>
+        /// <param name="obj">Массив байтов</param>
+        /// <param name="reverse">true для обратного порядка строки</param>
+        /// <returns></returns>
+        static public string ToHex(byte[] obj, bool reverse = false)
+        {
+            if (reverse)
+                obj = obj.Reverse().ToArray();
+            string g = "";
+            foreach (var item in obj)
+            {
+                g += item.ToString().PadRight(4, ' ');
+            }
+            return g;
+        }
+        /// <summary>
+        /// Переводит hex-строку в массив байтов. Строка должна иметь четное количество символов и содержать только символы цифр (0-9) и буквы (A-F).
+        /// </summary>
+        /// <param name="data">hex-строка</param>
+        /// <param name="reverse">true - инвертировать результат (обратный порядок байт в массиве)</param>
+        /// <returns></returns>
+        static public byte[] ToBytes(string data, bool reverse = false)
+        {
+            if (data.Length % 2 != 0)
+                return null;
+            byte[] arr = new byte[data.Length / 2];
+            int j = 0;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                arr[i] = Convert.ToByte(data[j].ToString() + data[j + 1].ToString(), 16);
+                j += 2;
+            }
+            if (reverse)
+                arr = arr.Reverse().ToArray();
+            return arr;
+        }
+        /// <summary>
+        /// Метод получения закрытого ключа из массива исходных байтов
+        /// </summary>
+        /// <param name="bytes">массив байтов, длинной 32</param>
         /// <returns></returns>
         static public string getKey(byte[] bytes)
         {
             var full = new byte[bytes.Length + 1];
             full[0] = 0x80;                           // Префикс основной (main) сети блокчейна
-            for (int i = 0; i < bytes.Length; i++)
+            /*for (int i = 0; i < bytes.Length; i++)
             {
                 full[i + 1] = Convert.ToByte(bytes[i]);
+            }*/
+            for (int i = full.Length - 1; i > 1; i--)
+            {
+                full[i] = Convert.ToByte(bytes[i - 1]);
             }
             return Encoders.Base58Check.EncodeData(full); 
+        }
+        public static string ByteArrayToString(byte[] ba)
+        {
+            StringBuilder hex = new StringBuilder(ba.Length * 2);
+            foreach (byte b in ba)
+                hex.AppendFormat("{0:x2}", b);
+            return hex.ToString();
         }
     }
 }
