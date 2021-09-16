@@ -8,6 +8,7 @@ using System.IO;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace BrutBTC
 {
@@ -16,7 +17,7 @@ namespace BrutBTC
         #region prop
         public static double[] speeds; // Массив скоростей работы
         public static Byte[] arr = new Byte[32];//Рандом массив
-        public static Random rnd = new Random();
+        public static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
         public static Dictionary<char, Dictionary<char, Dictionary<char, Dictionary<char, List<string>>>>> wallets 
             = new Dictionary<char, Dictionary<char, Dictionary<char, Dictionary<char, List<string>>>>>(); // "Горячая" база кошельков, четырехуровневая
         #endregion
@@ -100,7 +101,7 @@ namespace BrutBTC
             var t = Stopwatch.StartNew();
             while (true)
             {
-                rnd.NextBytes(arr); // Заполняем рандомно массив
+                rng.GetBytes(arr); // Заполняем рандомно массив
                 var secret = getKey(arr); // Получаем из него секрет
                 var address = new BitcoinSecret(secret, Network.Main).GetAddress(ScriptPubKeyType.Legacy).ToString(); // из секрета получаем адресс
                 try
