@@ -16,7 +16,6 @@ namespace BrutBTC
     {
         #region prop
         public static double[] speeds; // Массив скоростей работы
-        public static Byte[] arr = new Byte[32];//Рандом массив
         public static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
         public static Dictionary<char, Dictionary<char, Dictionary<char, Dictionary<char, List<string>>>>> wallets 
             = new Dictionary<char, Dictionary<char, Dictionary<char, Dictionary<char, List<string>>>>>(); // "Горячая" база кошельков, четырехуровневая
@@ -102,7 +101,7 @@ namespace BrutBTC
         }
         public static void brut(int taskIndex)
         {
-            
+            Byte[] arr = new Byte[32];//Рандом массив
             int i = 0;
             var t = Stopwatch.StartNew();
             while (true)
